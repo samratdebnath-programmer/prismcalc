@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="aurora">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PrismCalc</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0b1e; --b1:#5b5bff; --b2:#00d4c0; --b3:#ff4fa3; --acc:#7cf3e4;
+  --ink:#f4f6ff; --mute:rgba(244,246,255,.58);
+  --glass:rgba(255,255,255,.07); --edge:rgba(255,255,255,.17); --key:rgba(255,255,255,.07);
+  --font:'Sora',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+[data-theme=ember]{--bg:#1a0a08;--b1:#ff6a2b;--b2:#ffb703;--b3:#e11d48;--acc:#ffd27a}
+[data-theme=lagoon]{--bg:#031a1d;--b1:#00b3a4;--b2:#2d7bff;--b3:#7cf36a;--acc:#9ff7ea}
+
+*{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-weight:400;overflow-x:hidden;transition:background .6s}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+/* animated background */
+.aurora{position:fixed;inset:0;z-index:-1;overflow:hidden}
+.aurora i{position:absolute;width:55vmax;height:55vmax;border-radius:50%;filter:blur(90px);opacity:.55;animation:drift 26s ease-in-out infinite alternate}
+.aurora i:nth-child(1){background:var(--b1);top:-20vmax;left:-12vmax}
+.aurora i:nth-child(2){background:var(--b2);bottom:-24vmax;right:-14vmax;animation-delay:-9s}
+.aurora i:nth-child(3){background:var(--b3);top:30%;left:38%;width:34vmax;height:34vmax;opacity:.32;animation-delay:-17s}
+@keyframes drift{to{transform:translate(9vmax,6vmax) scale(1.18)}}
+
+.shell{max-width:1120px;margin:0 auto;padding:clamp(12px,3vw,32px);display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+.bar{grid-column:1/-1;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 18px}
+.bar h1{font-size:1.15rem;font-weight:600;letter-spacing:.02em;margin-right:auto}
+
+.glass{background:var(--glass);backdrop-filter:blur(26px) saturate(170%);-webkit-backdrop-filter:blur(26px) saturate(170%);
+  border:1px solid var(--edge);border-radius:28px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 24px 60px rgba(0,0,0,.38)}
+.panel{padding:clamp(14px,2.4vw,24px)}
+
+.tabs,.tools{display:flex;gap:6px}
+.tabs button,.tools button{padding:8px 16px;border-radius:999px;font-size:.82rem;color:var(--mute);transition:background .2s,color .2s}
+.tabs button:hover,.tools button:hover{background:var(--key);color:var(--ink)}
+.tabs button.on{background:rgba(255,255,255,.16);color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.tools button{border:1px solid var(--edge)}
+
+/* screen */
+.screen{position:relative;padding:6px 6px 14px;text-align:right}
+.screen input{width:100%;background:none;border:0;outline:0;text-align:right;font-size:clamp(1.05rem,2.6vw,1.5rem);font-weight:300;padding:8px 4px}
+.screen input::placeholder{color:var(--mute);font-size:.9rem}
+.out{display:block;width:100%;text-align:right;font-size:clamp(2.1rem,6vw,3.4rem);font-weight:600;font-variant-numeric:tabular-nums;color:var(--acc);min-height:1.3em;overflow-x:auto;white-space:nowrap}
+.bases{min-height:1.2em;font-size:.74rem;color:var(--mute);display:flex;gap:14px;justify-content:flex-end;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.msg{min-height:1.2em;margin-top:6px;font-size:.78rem;color:var(--mute)}
+.msg.err{color:#ff8fa3}
+.badge{position:absolute;left:8px;top:12px;font-size:.7rem;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.16)}
+
+/* keypad */
+.memrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.pads{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pad{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pad button,.memrow button{height:clamp(44px,6.4vw,58px);border-radius:16px;background:var(--key);border:1px solid rgba(255,255,255,.09);
+  font-size:1.02rem;transition:background .15s,transform .08s;box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
+.memrow button{height:34px;font-size:.78rem;color:var(--mute)}
+.pad button:hover,.memrow button:hover{background:rgba(255,255,255,.17)}
+.pad button:active,.memrow button:active{transform:scale(.94)}
+.pad .f{font-size:.86rem;color:var(--mute)}
+.pad .o{color:var(--acc);background:rgba(255,255,255,.11)}
+.pad .c{color:#ff9db4}
+.pad .eq{background:linear-gradient(135deg,var(--b1),var(--b2));color:#fff;font-weight:600;border-color:transparent;box-shadow:0 8px 24px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.4)}
+
+/* history */
+.hist{padding:18px;max-height:calc(100vh - 140px);display:flex;flex-direction:column}
+.hhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.hhead h2{font-size:.95rem;font-weight:600}
+.ghost{padding:7px 14px;border-radius:999px;border:1px solid var(--edge);font-size:.76rem;color:var(--mute)}
+.ghost:hover{color:var(--ink);background:var(--key)}
+.hlist{overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.hi{display:flex;flex-direction:column;align-items:flex-end;padding:10px 12px;border-radius:14px;background:var(--key);text-align:right;width:100%}
+.hi:hover{background:rgba(255,255,255,.15)}
+.hi span{font-size:.76rem;color:var(--mute);word-break:break-all}
+.hi b{font-size:1.1rem;font-weight:600;color:var(--acc);word-break:break-all}
+.empty{font-size:.8rem;color:var(--mute)}
+
+/* graph */
+.fx{width:100%;padding:12px 16px;border-radius:16px;border:1px solid var(--edge);background:var(--key);outline:0;font-size:1rem}
+.cvwrap{height:clamp(300px,52vh,460px);margin:10px 0 12px;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.18)}
+#cv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#cv:active{cursor:grabbing}
+
+@media (max-width:860px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .hist{max-height:320px}
+}
+@media (max-width:560px){
+  .pads{grid-template-columns:1fr}
+  .pad.sci button{height:40px}
+}
+@media (prefers-reduced-motion:reduce){
+  .aurora i{animation:none}
+  *{transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<main class="shell">
+  <header class="glass bar">
+    <h1>PrismCalc</h1>
+    <nav class="tabs">
+      <button class="on" data-tab="calc">Calculator</button>
+      <button data-tab="graph">Graph</button>
+    </nav>
+    <div class="tools">
+      <button id="angle" title="Angle mode">DEG</button>
+      <button id="theme" title="Change theme">Aurora</button>
+    </div>
+  </header>
+
+  <section class="glass panel" id="calc">
+    <div class="screen">
+      <span id="mem" class="badge" hidden>M</span>
+      <input id="expr" inputmode="none" autocomplete="off" spellcheck="false" placeholder="Type or tap: sin(30) + 2^3 * (4/2)" aria-label="Expression">
+      <button id="out" class="out" title="Click to copy">0</button>
+      <div id="bases" class="bases"></div>
+      <p id="msg" class="msg" role="status"></p>
+    </div>
+    <div class="memrow" id="memrow"></div>
+    <div class="pads">
+      <div class="pad sci" id="sci"></div>
+      <div class="pad main" id="main"></div>
+    </div>
+  </section>
+
+  <section class="glass panel" id="graph" hidden>
+    <input id="fx" class="fx" value="sin(x); x^2/10" spellcheck="false" aria-label="Functions of x separated by semicolons">
+    <p id="gmsg" class="msg">Separate functions with ; &nbsp;Drag to pan, scroll to zoom. Graphs always use radians.</p>
+    <div class="cvwrap"><canvas id="cv"></canvas></div>
+    <button id="reset" class="ghost">Reset view</button>
+  </section>
+
+  <aside class="glass hist">
+    <div class="hhead"><h2>History</h2><button id="clearhist" class="ghost">Clear</button></div>
+    <div id="hist" class="hlist"></div>
+  </aside>
+</main>
+
+<script>
+'use strict';
+/* PrismCalc: expression engine (no eval), scientific functions, history, memory, graphing */
+
+const $ = s => document.querySelector(s);
+const state = { angle: 'DEG', ans: 0, vars: {} };
+let dry = false;      // true while previewing, so assignments don't get stored
+let M = 0;            // memory
+let fresh = false;    // true right after "=", next digit starts a new expression
+
+/* ---------- storage helpers ---------- */
+const store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+/* ---------- math library ---------- */
+const rad = x => state.angle === 'DEG' ? x * Math.PI / 180 : state.angle === 'GRAD' ? x * Math.PI / 200 : x;
+const deg = x => state.angle === 'DEG' ? x * 180 / Math.PI : state.angle === 'GRAD' ? x * 200 / Math.PI : x;
+const snap = r => Math.abs(r) < 1e-14 ? 0 : r;
+
+function fact(n) {
+  if (n < 0 || !Number.isInteger(n)) throw new Error('Factorial needs a whole number ≥ 0');
+  if (n > 170) throw new Error('Result is too large');
+  let r = 1; for (let i = 2; i <= n; i++) r *= i; return r;
+}
+function ncr(n, k) {
+  if (!Number.isInteger(n) || !Number.isInteger(k) || k < 0 || k > n) throw new Error('nCr needs whole numbers with 0 ≤ r ≤ n');
+  k = Math.min(k, n - k); let r = 1;
+  for (let i = 1; i <= k; i++) r = r * (n - k + i) / i;
+  return Math.round(r);
+}
+const gcd = (a, b) => b ? gcd(b, a % b) : Math.abs(a);
+
+const FN = {
+  sin: [1, x => snap(Math.sin(rad(x)))],
+  cos: [1, x => snap(Math.cos(rad(x)))],
+  tan: [1, x => { const a = rad(x); if (Math.abs(Math.cos(a)) < 1e-14) throw new Error('tan is undefined here'); return snap(Math.tan(a)); }],
+  asin: [1, x => deg(Math.asin(x))], acos: [1, x => deg(Math.acos(x))], atan: [1, x => deg(Math.atan(x))],
+  sinh: [1, Math.sinh], cosh: [1, Math.cosh], tanh: [1, Math.tanh],
+  ln: [1, Math.log], log: [1, Math.log10], log2: [1, Math.log2],
+  sqrt: [1, Math.sqrt], cbrt: [1, Math.cbrt], abs: [1, Math.abs], exp: [1, Math.exp],
+  floor: [1, Math.floor], ceil: [1, Math.ceil], round: [1, Math.round],
+  fact: [1, fact], ncr: [2, ncr], npr: [2, (n, r) => ncr(n, r) * fact(r)],
+  gcd: [2, gcd], lcm: [2, (a, b) => Math.abs(a * b) / gcd(a, b)],
+  pow: [2, Math.pow], root: [2, (x, n) => Math.pow(x, 1 / n)]
+};
+const CONST = { pi: Math.PI, e: Math.E, tau: 2 * Math.PI, phi: (1 + Math.sqrt(5)) / 2 };
+
+/* ---------- tokenizer + recursive-descent parser (compiles to closures) ---------- */
+function tokenize(src) {
+  const s = src.toLowerCase().replace(/×/g, '*').replace(/÷/g, '/').replace(/[−–]/g, '-')
+    .replace(/π/g, 'pi').replace(/√/g, 'sqrt').replace(/\s+/g, '');
+  const t = []; let i = 0, m;
+  while (i < s.length) {
+    const r = s.slice(i);
+    if ((m = /^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/.exec(r))) t.push({ t: 'num', v: parseFloat(m[0]) });
+    else if ((m = /^(log2|[a-z_]+)/.exec(r))) t.push({ t: 'id', v: m[0] });
+    else if ('+-*/^%!(),='.includes(r[0])) { m = [r[0]]; t.push({ t: 'op', v: r[0] }); }
+    else throw new Error('Unexpected "' + r[0] + '"');
+    i += m[0].length;
+  }
+  return t;
+}
+
+function parse(src) {
+  const T = tokenize(src); let p = 0;
+  const isOp = v => T[p] && T[p].t === 'op' && T[p].v === v;
+  const next = () => T[p++];
+
+  function expr() {
+    if (T[p] && T[p].t === 'id' && T[p + 1] && T[p + 1].v === '=' && !FN[T[p].v] && !(T[p].v in CONST) && T[p].v !== 'ans') {
+      const name = T[p].v; p += 2; const r = add();
+      return e => { const v = r(e); if (!dry) state.vars[name] = v; return v; };
+    }
+    return add();
+  }
+  function add() {
+    let l = mul();
+    while (isOp('+') || isOp('-')) {
+      const o = next().v, r = mul(), a = l;
+      const rv = r.pct ? (e => a(e) * r.pct(e) / 100) : r;   // 200 + 10% = 220
+      l = o === '+' ? e => a(e) + rv(e) : e => a(e) - rv(e);
+    }
+    return l;
+  }
+  function mul() {
+    let l = unary();
+    for (;;) {
+      let o = null;
+      if (isOp('*') || isOp('/')) o = next().v;
+      else if (T[p] && T[p].t === 'id' && T[p].v === 'mod') { p++; o = 'mod'; }
+      else if (T[p] && (T[p].t === 'num' || T[p].t === 'id' || isOp('('))) o = '*';   // 2pi, 3(4), 2sin(x)
+      else break;
+      const a = l, r = unary();
+      l = o === '*' ? e => a(e) * r(e)
+        : o === '/' ? e => { const d = r(e); if (d === 0) throw new Error('Cannot divide by zero'); return a(e) / d; }
+        : e => { const d = r(e); if (d === 0) throw new Error('Cannot divide by zero'); return ((a(e) % d) + d) % d; };
+    }
+    return l;
+  }
+  function unary() {
+    if (isOp('-')) { p++; const r = unary(); return e => -r(e); }
+    if (isOp('+')) { p++; return unary(); }
+    return pow();
+  }
+  function pow() {
+    const b = post();
+    if (isOp('^')) { p++; const x = unary(); return e => Math.pow(b(e), x(e)); }
+    return b;
+  }
+  function post() {
+    let v = prim();
+    while (isOp('!') || isOp('%')) {
+      const o = next().v, a = v;
+      if (o === '!') v = e => fact(a(e));
+      else { v = e => a(e) / 100; v.pct = a; }
+    }
+    return v;
+  }
+  function close() {
+    if (isOp(')')) p++;
+    else if (p < T.length) throw new Error('Expected ")"');   // missing ")" at the very end is forgiven
+  }
+  function prim() {
+    const k = next();
+    if (!k) throw new Error('Expression is incomplete');
+    if (k.t === 'num') return () => k.v;
+    if (k.t === 'id') {
+      const fn = FN[k.v];
+      if (fn) {
+        const args = [];
+        if (isOp('(')) {
+          p++;
+          if (!isOp(')')) for (;;) { args.push(add()); if (isOp(',')) p++; else break; }
+          close();
+        } else args.push(unary());
+        if (args.length !== fn[0]) throw new Error(k.v + ' needs ' + fn[0] + ' value' + (fn[0] > 1 ? 's' : ''));
+        return e => fn[1](...args.map(a => a(e)));
+      }
+      return e => {
+        if (k.v in e) return e[k.v];
+        if (k.v === 'ans') return state.ans;
+        if (k.v in state.vars) return state.vars[k.v];
+        if (k.v in CONST) return CONST[k.v];
+        throw new Error('Unknown name "' + k.v + '"');
+      };
+    }
+    if (k.v === '(') { const v = add(); close(); return v; }
+    throw new Error('Unexpected "' + k.v + '"');
+  }
+
+  const f = expr();
+  if (p < T.length) throw new Error('Unexpected "' + T[p].v + '"');
+  return f;
+}
+
+function run(src) {
+  const v = parse(src)({});
+  if (typeof v !== 'number' || isNaN(v)) throw new Error('Math error: result is undefined');
+  if (!isFinite(v)) throw new Error('Result is too large');
+  return v;
+}
+
+/* ---------- formatting ---------- */
+const raw = v => String(+(v + 0).toPrecision(12));
+function fmt(v) {
+  v += 0; const a = Math.abs(v);
+  if (a !== 0 && (a >= 1e15 || a < 1e-7)) return v.toExponential(8).replace(/\.?0+e/, 'e');
+  return (+v.toPrecision(12)).toLocaleString('en-IN', { maximumFractionDigits: 12 });
+}
+
+/* ---------- calculator UI ---------- */
+const E = $('#expr'), O = $('#out'), B = $('#bases'), MSG = $('#msg');
+let hist = store.get('prismcalc-history', []);
+
+function msg(t, err) { MSG.textContent = t; MSG.className = 'msg' + (err ? ' err' : ''); }
+function bases(v) {
+  B.innerHTML = '';
+  if (!Number.isInteger(v) || Math.abs(v) > Number.MAX_SAFE_INTEGER) return;
+  const s = v < 0 ? '-' : '', a = Math.abs(v);
+  [['HEX', 16], ['DEC', 10], ['OCT', 8], ['BIN', 2]].forEach(([n, b]) => {
+    const sp = document.createElement('span'); sp.textContent = n + ' ' + s + a.toString(b).toUpperCase(); B.append(sp);
+  });
+}
+function live() {
+  msg('');
+  const v = E.value.trim();
+  if (!v) { O.textContent = '0'; B.innerHTML = ''; return; }
+  dry = true;
+  try { const r = run(v); O.textContent = fmt(r); O.dataset.v = raw(r); bases(r); }
+  catch { O.textContent = ''; B.innerHTML = ''; }
+  dry = false;
+}
+function ins(t) {
+  if (fresh) { if (/^[\d.a-zπ√(]/i.test(t)) E.value = ''; fresh = false; }
+  const s = E.selectionStart ?? E.value.length, e = E.selectionEnd ?? s;
+  E.setRangeText(t, s, e, 'end'); E.focus(); live();
+}
+function commit() {
+  const v = E.value.trim(); if (!v) return;
+  try {
+    const r = run(v); state.ans = r;
+    hist.unshift({ e: v, r: raw(r) }); hist.length = Math.min(hist.length, 60);
+    store.set('prismcalc-history', hist); drawHist();
+    E.value = raw(r); fresh = true; live();
+  } catch (x) { msg(x.message, true); }
+  E.focus();
+}
+function clr() { E.value = ''; fresh = false; live(); E.focus(); }
+function back() {
+  const s = E.selectionStart, e = E.selectionEnd;
+  if (s === e && s > 0) E.setRangeText('', s - 1, e, 'end'); else E.setRangeText('', s, e, 'end');
+  fresh = false; live(); E.focus();
+}
+function neg() {
+  const v = E.value.trim(); if (!v) return ins('-');
+  E.value = /^-\(.*\)$/.test(v) ? v.slice(2, -1) : '-(' + v + ')'; fresh = false; live(); E.focus();
+}
+function cur() { dry = true; try { return run(E.value); } catch { return state.ans; } finally { dry = false; } }
+function memDo(fn) { fn(); $('#mem').hidden = M === 0; E.focus(); }
+
+function build(host, keys) {
+  keys.forEach(([l, c, a]) => {
+    const b = document.createElement('button'); b.textContent = l; b.className = c;
+    b.onclick = typeof a === 'function' ? a : () => ins(a); host.append(b);
+  });
+}
+build($('#sci'), [
+  ['sin', 'f', 'sin('], ['cos', 'f', 'cos('], ['tan', 'f', 'tan('], ['π', 'f', 'π'],
+  ['sin⁻¹', 'f', 'asin('], ['cos⁻¹', 'f', 'acos('], ['tan⁻¹', 'f', 'atan('], ['e', 'f', 'e'],
+  ['ln', 'f', 'ln('], ['log', 'f', 'log('], ['√', 'f', '√('], ['xʸ', 'f', '^'],
+  ['x²', 'f', '^2'], ['n!', 'f', '!'], ['(', 'f', '('], [')', 'f', ')'],
+  ['nCr', 'f', 'nCr('], ['|x|', 'f', 'abs('], ['mod', 'f', ' mod '], ['Ans', 'f', 'ans']
+]);
+build($('#main'), [
+  ['AC', 'c', clr], ['⌫', 'c', back], ['%', 'o', '%'], ['÷', 'o', '÷'],
+  ['7', 'n', '7'], ['8', 'n', '8'], ['9', 'n', '9'], ['×', 'o', '×'],
+  ['4', 'n', '4'], ['5', 'n', '5'], ['6', 'n', '6'], ['−', 'o', '−'],
+  ['1', 'n', '1'], ['2', 'n', '2'], ['3', 'n', '3'], ['+', 'o', '+'],
+  ['±', 'n', neg], ['0', 'n', '0'], ['.', 'n', '.'], ['=', 'eq', commit]
+]);
+build($('#memrow'), [
+  ['MC', '', () => memDo(() => M = 0)], ['MR', '', () => ins(raw(M))],
+  ['M−', '', () => memDo(() => M -= cur())], ['M+', '', () => memDo(() => M += cur())]
+]);
+
+E.addEventListener('input', () => { fresh = false; live(); });
+E.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); commit(); }
+  else if (e.key === 'Escape') clr();
+  else if (fresh && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+    if (/[\d.a-z(]/i.test(e.key)) E.value = '';
+    fresh = false;
+  }
+});
+document.addEventListener('keydown', e => {   // keyboard works even after clicking a button
+  if (!$('#calc').hidden && document.activeElement !== E && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key.length === 1 || e.key === 'Enter' || e.key === 'Escape' || e.key === 'Backspace')) E.focus();
+});
+O.onclick = async () => {
+  if (!O.textContent) return;
+  try { await navigator.clipboard.writeText(O.dataset.v); msg('Copied ' + O.dataset.v); } catch { msg('Copy is not allowed here', true); }
+};
+
+function drawHist() {
+  const H = $('#hist'); H.innerHTML = '';
+  if (!hist.length) { H.innerHTML = '<p class="empty">Your calculations appear here. Click one to reuse it.</p>'; return; }
+  hist.forEach(h => {
+    const b = document.createElement('button'); b.className = 'hi'; b.innerHTML = '<span></span><b></b>';
+    b.children[0].textContent = h.e; b.children[1].textContent = fmt(+h.r);
+    b.onclick = () => { E.value = h.e; fresh = false; live(); E.focus(); };
+    H.append(b);
+  });
+}
+$('#clearhist').onclick = () => { hist = []; store.set('prismcalc-history', hist); drawHist(); };
+
+/* ---------- angle mode, themes, tabs ---------- */
+const ANGLES = ['DEG', 'RAD', 'GRAD'], THEMES = ['aurora', 'ember', 'lagoon'];
+$('#angle').onclick = e => {
+  state.angle = ANGLES[(ANGLES.indexOf(state.angle) + 1) % 3]; e.target.textContent = state.angle; live();
+};
+function setTheme(t) {
+  document.documentElement.dataset.theme = t; $('#theme').textContent = t[0].toUpperCase() + t.slice(1);
+  store.set('prismcalc-theme', t); if (!$('#graph').hidden) plot();
+}
+$('#theme').onclick = () => setTheme(THEMES[(THEMES.indexOf(document.documentElement.dataset.theme) + 1) % 3]);
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  $('#calc').hidden = b.dataset.tab !== 'calc'; $('#graph').hidden = b.dataset.tab !== 'graph';
+  if (b.dataset.tab === 'graph') requestAnimationFrame(plot); else E.focus();
+});
+
+/* ---------- graph plotter ---------- */
+const G = { cx: 0, cy: 0, s: 48, fns: [] };
+function compileFns() {
+  const gm = $('#gmsg'); G.fns = [];
+  try {
+    $('#fx').value.split(/[;\n]/).map(s => s.replace(/^\s*(y|f\(x\))\s*=/i, '').trim()).filter(Boolean)
+      .forEach(s => G.fns.push(parse(s)));
+    gm.className = 'msg'; gm.textContent = 'Separate functions with ;  Drag to pan, scroll to zoom. Graphs always use radians.';
+  } catch (x) { gm.className = 'msg err'; gm.textContent = x.message; }
+  plot();
+}
+function plot() {
+  const cv = $('#cv'), r = cv.getBoundingClientRect(), d = devicePixelRatio || 1;
+  if (!r.width) return;
+  cv.width = r.width * d; cv.height = r.height * d;
+  const c = cv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0);
+  const W = r.width, H = r.height, X = x => W / 2 + (x - G.cx) * G.s, Y = y => H / 2 - (y - G.cy) * G.s;
+  const css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue(n).trim();
+  const x0 = G.cx - W / 2 / G.s, x1 = G.cx + W / 2 / G.s, y0 = G.cy - H / 2 / G.s, y1 = G.cy + H / 2 / G.s;
+  const need = 80 / G.s, mag = Math.pow(10, Math.floor(Math.log10(need)));
+  const step = [1, 2, 5, 10].map(m => m * mag).find(s => s >= need);
+  c.font = '11px Sora, system-ui, sans-serif'; c.fillStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 1;
+  const ax = Math.min(Math.max(Y(0), 14), H - 6), ay = Math.min(Math.max(X(0) + 6, 4), W - 40);
+  for (let i = Math.ceil(x0 / step); i * step <= x1; i++) {
+    const px = Math.round(X(i * step)) + .5; c.strokeStyle = i ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.5)';
+    c.beginPath(); c.moveTo(px, 0); c.lineTo(px, H); c.stroke();
+    if (i) c.fillText(+(i * step).toFixed(10), px + 3, ax + (ax > H - 20 ? -4 : 12));
+  }
+  for (let j = Math.ceil(y0 / step); j * step <= y1; j++) {
+    const py = Math.round(Y(j * step)) + .5; c.strokeStyle = j ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.5)';
+    c.beginPath(); c.moveTo(0, py); c.lineTo(W, py); c.stroke();
+    if (j) c.fillText(+(j * step).toFixed(10), ay, py - 4);
+  }
+  const colors = [col('--b2'), col('--b3'), col('--b1')], saved = state.angle;
+  state.angle = 'RAD'; dry = true;
+  G.fns.forEach((f, i) => {
+    c.beginPath(); c.strokeStyle = colors[i % 3]; c.lineWidth = 2.4; c.lineJoin = 'round';
+    let pen = false, py = 0;
+    for (let px = 0; px <= W; px++) {
+      let y; try { y = f({ x: G.cx + (px - W / 2) / G.s }); } catch { y = NaN; }
+      if (typeof y !== 'number' || !isFinite(y)) { pen = false; continue; }
+      const sy = Y(y);
+      if (pen && Math.abs(sy - py) > H * 1.5) pen = false;   // break lines at asymptotes
+      pen ? c.lineTo(px, sy) : c.moveTo(px, sy); pen = true; py = sy;
+    }
+    c.stroke();
+  });
+  state.angle = saved; dry = false;
+}
+(() => {
+  const cv = $('#cv'); let drag = null;
+  cv.onpointerdown = e => { drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); };
+  cv.onpointermove = e => {
+    if (!drag) return;
+    G.cx -= (e.clientX - drag.x) / G.s; G.cy += (e.clientY - drag.y) / G.s; drag = { x: e.clientX, y: e.clientY }; plot();
+  };
+  cv.onpointerup = () => drag = null;
+  cv.addEventListener('wheel', e => {
+    e.preventDefault();
+    const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+    const wx = G.cx + (mx - r.width / 2) / G.s, wy = G.cy - (my - r.height / 2) / G.s;
+    G.s = Math.min(Math.max(G.s * Math.exp(-e.deltaY * .0015), 2), 5000);
+    G.cx = wx - (mx - r.width / 2) / G.s; G.cy = wy + (my - r.height / 2) / G.s; plot();
+  }, { passive: false });
+  $('#fx').addEventListener('input', compileFns);
+  $('#reset').onclick = () => { G.cx = 0; G.cy = 0; G.s = 48; plot(); };
+  new ResizeObserver(() => { if (!$('#graph').hidden) plot(); }).observe($('.cvwrap'));
+})();
+
+/* ---------- start ---------- */
+setTheme(store.get('prismcalc-theme', 'aurora'));
+drawHist(); compileFns(); live(); E.focus();
+</script>
+</body>
+</html>

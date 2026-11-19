@@ -26,7 +26,7 @@ git init
 git add .
 git commit -m "PrismCalc: first release"
 git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/prismcalc.git
+git remote add origin https://samratdebnath-programmer.github.io/prismcalc/
 git push -u origin main
 On GitHub open Settings → Pages, set the source to the main branch and the / (root) folder, then save.
 After a minute the site is live at https://YOUR-USERNAME.github.io/prismcalc/.
